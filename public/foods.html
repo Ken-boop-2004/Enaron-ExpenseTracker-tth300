@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Food menu | Mini Information System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header></header>
+<main>
+  <div class="head">
+    <div><h1>Food menu</h1><p class="sub" style="margin:0">Add, edit, delete, and look up dishes.</p></div>
+  </div>
+
+  <div class="panel">
+    <h2 id="formTitle">Add food</h2>
+    <div class="inline">
+      <input id="foodName" placeholder="Food name" aria-label="Food name">
+      <input id="price" type="number" min="0" step="0.01" placeholder="Price" aria-label="Price">
+      <button class="btn" id="save">Add food</button>
+      <button class="btn ghost" id="cancel" style="display:none">Cancel</button>
+    </div>
+    <div class="msg" id="message" role="alert"></div>
+  </div>
+
+  <div class="panel">
+    <div class="tools">
+      <input id="foodId" type="number" placeholder="Look up by ID" aria-label="Look up by ID">
+      <button class="btn ghost" onclick="searchFood()">Search</button>
+    </div>
+    <div class="result" id="result"></div>
+    <table>
+      <thead><tr><th>ID</th><th>Food</th><th class="num">Price</th><th></th></tr></thead>
+      <tbody id="foodList"></tbody>
+    </table>
+    <p class="empty" id="empty" style="display:none">No foods yet. Add one above.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+header('foods.html');
+let all = [], editId = null;
+
+function say(text, ok) {
+  message.textContent = text;
+  message.className = 'msg' + (ok ? ' ok' : '');
+  message.style.display = 'block';
+}
+
+async function load() {
+  try {
+    all = await api('/api/foods');
+    empty.style.display = all.length ? 'none' : 'block';
+    foodList.innerHTML = all.map((f) => `<tr>
+      <td>${f.id}</td><td>${esc(f.name)}</td><td class="num">${peso(f.price)}</td>
+      <td class="actions">
+        <button class="btn ghost small" onclick="edit(${f.id})">Edit</button>
+        <button class="btn danger small" onclick="remove(${f.id})">Delete</button>
+      </td></tr>`).join('');
+  } catch (e) { say(e.message, false); }
+}
+
+function reset() {
+  editId = null; foodName.value = price.value = '';
+  formTitle.textContent = 'Add food'; save.textContent = 'Add food'; cancel.style.display = 'none';
+}
+
+function edit(id) {
+  const f = all.find((x) => x.id === id);
+  editId = id; foodName.value = f.name; price.value = f.price;
+  formTitle.textContent = 'Edit food'; save.textContent = 'Save changes'; cancel.style.display = '';
+  foodName.focus();
+}
+
+save.onclick = async () => {
+  try {
+    const body = { name: foodName.value.trim(), price: price.value };
+    await api(editId ? '/api/foods/' + editId : '/api/foods', editId ? 'PUT' : 'POST', body);
+    say(editId ? 'Food updated' : 'Food added', true);
+    reset(); load();
+  } catch (e) { say(e.message, false); }
+};
+cancel.onclick = reset;
+
+async function remove(id) {
+  if (!confirm('Delete this food?')) return;
+  await api('/api/foods/' + id, 'DELETE');
+  if (editId === id) reset();
+  load();
+}
+
+async function searchFood() {
+  result.style.display = 'block';
+  if (!foodId.value) { result.textContent = 'Enter a food ID.'; return; }
+  try {
+    const f = await api('/api/foods/' + foodId.value);
+    result.innerHTML = `<strong>ID:</strong> ${f.id}<br><strong>Food:</strong> ${esc(f.name)}<br><strong>Price:</strong> ${peso(f.price)}`;
+  } catch (e) { result.textContent = 'Food not found.'; }
+}
+
+load();
+</script>
+</body>
+</html>

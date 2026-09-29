@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expenses | Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header></header>
+<main>
+  <div class="head">
+    <div><h1>Expenses</h1><p class="sub" style="margin:0">View, edit, or delete records.</p></div>
+    <a class="btn" href="expense-form.html">Add expense</a>
+  </div>
+
+  <div class="panel">
+    <div class="tools">
+      <input id="search" type="search" placeholder="Search description" aria-label="Search description">
+      <select id="filter" aria-label="Filter by category"></select>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th class="hide-sm">Category</th><th class="num">Amount</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="empty" id="empty" style="display:none">No expenses found.</p>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+header('expenses.html');
+fillCategories(filter, true);
+let all = [];
+
+function render() {
+  const q = search.value.toLowerCase();
+  const list = all.filter((e) => e.description.toLowerCase().includes(q) && (!filter.value || e.category === filter.value));
+  empty.style.display = list.length ? 'none' : 'block';
+  rows.innerHTML = list.map((e) => `<tr>
+    <td>${e.expense_date}</td><td>${esc(e.description)}</td><td class="hide-sm"><span class="badge">${esc(e.category)}</span></td>
+    <td class="num">${peso(e.amount)}</td>
+    <td class="actions">
+      <a class="btn ghost small" href="expense-form.html?id=${e.id}">Edit</a>
+      <button class="btn danger small" onclick="remove(${e.id})">Delete</button>
+    </td></tr>`).join('');
+}
+
+async function load() {
+  try { all = await api('/api/expenses'); render(); }
+  catch (e) { empty.textContent = e.message; empty.style.display = 'block'; }
+}
+
+async function remove(id) {
+  if (!confirm('Delete this expense? This cannot be undone.')) return;
+  await api('/api/expenses/' + id, 'DELETE');
+  load();
+}
+
+search.oninput = render;
+filter.onchange = render;
+load();
+</script>
+</body>
+</html>

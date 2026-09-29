@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense Form | Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header></header>
+
+<main>
+  <h1 id="title">Add expense</h1>
+  <p class="sub">Fill in the details and save.</p>
+
+  <div class="panel form">
+
+```
+<label for="description">Description</label>
+<input
+  id="description"
+  maxlength="150"
+  placeholder="e.g. Lunch at canteen"
+>
+
+<div class="row">
+
+  <div>
+    <label for="category">Category</label>
+
+    <select id="category">
+      <option value="">Select category</option>
+      <option value="Food">Food</option>
+      <option value="Transport">Transport</option>
+      <option value="School">School</option>
+      <option value="Bills">Bills</option>
+      <option value="Entertainment">Entertainment</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="amount">Amount (₱)</label>
+
+    <input
+      id="amount"
+      type="number"
+      min="0.01"
+      step="0.01"
+      placeholder="0.00"
+    >
+  </div>
+
+</div>
+
+<label for="date">Date</label>
+
+<input
+  id="date"
+  type="date"
+>
+
+<div
+  class="msg"
+  id="msg"
+  role="alert"
+></div>
+
+<div class="btns">
+
+  <button
+    class="btn"
+    id="save"
+  >
+    Save expense
+  </button>
+
+  <a
+    class="btn ghost"
+    href="expenses.html"
+  >
+    Cancel
+  </a>
+
+</div>
+```
+
+  </div>
+</main>
+
+<script src="common.js"></script>
+
+<script>
+
+const id = new URLSearchParams(location.search).get('id');
+
+
+// ===============================
+// INITIAL SETUP
+// ===============================
+
+header('expenses.html');
+
+// Set today's date
+date.value = new Date().toISOString().slice(0, 10);
+
+
+// ===============================
+// EDIT EXPENSE
+// ===============================
+
+if (id) {
+
+  title.textContent = 'Edit expense';
+  save.textContent = 'Save changes';
+
+  api('/api/expenses/' + id)
+    .then((e) => {
+
+      description.value = e.description;
+      category.value = e.category;
+      amount.value = e.amount;
+      date.value = e.expense_date;
+
+    })
+    .catch((e) => {
+
+      showError(e.message);
+
+    });
+
+}
+
+
+// ===============================
+// SHOW ERROR
+// ===============================
+
+function showError(text) {
+
+  msg.textContent = text;
+  msg.className = 'msg';
+  msg.style.display = 'block';
+
+}
+
+
+// ===============================
+// SAVE EXPENSE
+// ===============================
+
+save.onclick = async () => {
+
+  // Get values from form
+  const descriptionValue = description.value.trim();
+  const categoryValue = category.value;
+  const amountValue = amount.value;
+  const dateValue = date.value;
+
+
+  // ===============================
+  // FRONTEND VALIDATION
+  // ===============================
+
+  const missing = [];
+
+  if (!descriptionValue) {
+    missing.push('Description');
+  }
+
+  if (!categoryValue) {
+    missing.push('Category');
+  }
+
+  if (!amountValue) {
+    missing.push('Amount');
+  }
+
+  if (!dateValue) {
+    missing.push('Date');
+  }
+
+  if (missing.length > 0) {
+
+    showError(
+      missing.join(', ') + ' ' +
+      (missing.length === 1 ? 'is required.' : 'are required.')
+    );
+
+    return;
+  }
+
+
+  // Check amount
+  if (Number(amountValue) <= 0) {
+
+    showError('Amount must be above 0.');
+
+    return;
+  }
+
+
+  // ===============================
+  // DATA TO SEND TO MYSQL
+  // ===============================
+
+  const body = {
+    description: descriptionValue,
+    category: categoryValue,
+    amount: amountValue,
+    expense_date: dateValue
+  };
+
+
+  // ===============================
+  // CREATE / UPDATE
+  // ===============================
+
+  try {
+
+    if (id) {
+
+      // UPDATE
+      await api(
+        '/api/expenses/' + id,
+        'PUT',
+        body
+      );
+
+    } else {
+
+      // CREATE
+      await api(
+        '/api/expenses',
+        'POST',
+        body
+      );
+
+    }
+
+
+    // Return to expense list
+    location.href = 'expenses.html';
+
+  } catch (e) {
+
+    showError(e.message);
+
+  }
+
+};
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header></header>
+<main>
+  <div class="head">
+    <div><h1>Dashboard</h1><p class="sub" style="margin:0">Where your money went.</p></div>
+    <a class="btn" href="expense-form.html">Add expense</a>
+  </div>
+
+  <div class="modules">
+    <a class="module" href="expenses.html"><strong>Expenses</strong><span id="mExp">Track spending</span><em>Open</em></a>
+    <a class="module" href="foods.html"><strong>Food menu</strong><span id="mFood">Menu and prices</span><em>Open</em></a>
+    <a class="module" href="movies.html"><strong>Movies</strong><span id="mMovie">Movie collection</span><em>Open</em></a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>Total spent</span><strong id="total">–</strong></div>
+    <div class="stat"><span>This month</span><strong id="month">–</strong></div>
+    <div class="stat"><span>Records</span><strong id="count">–</strong></div>
+  </div>
+
+  <div class="panel"><h2>Spending by category</h2><div id="cats"></div></div>
+
+  <div class="panel">
+    <h2>Recent expenses</h2>
+    <table><tbody id="recent"></tbody></table>
+    <a class="link" href="expenses.html">View all expenses</a>
+  </div>
+</main>
+<script src="common.js"></script>
+<script>
+header('index.html');
+api('/api/foods').then((l) => (mFood.textContent = l.length + ' dishes')).catch(() => {});
+api('/api/movies').then((l) => (mMovie.textContent = l.length + ' movies')).catch(() => {});
+(async () => {
+  const list = await api('/api/expenses');
+  const sum = (arr) => arr.reduce((t, e) => t + Number(e.amount), 0);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+
+  total.textContent = peso(sum(list));
+  month.textContent = peso(sum(list.filter((e) => e.expense_date.startsWith(thisMonth))));
+  count.textContent = list.length;
+  mExp.textContent = list.length + ' records';
+
+  const totals = {};
+  list.forEach((e) => (totals[e.category] = (totals[e.category] || 0) + Number(e.amount)));
+  const max = Math.max(...Object.values(totals), 1);
+  cats.innerHTML = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([c, v]) =>
+    `<div class="cat"><div><span>${esc(c)}</span><span>${peso(v)}</span></div>
+     <div class="track"><div class="fill" style="width:${(v / max) * 100}%"></div></div></div>`).join('')
+    || '<p class="empty">No expenses yet.</p>';
+
+  recent.innerHTML = list.slice(0, 5).map((e) =>
+    `<tr><td>${esc(e.description)}</td><td class="hide-sm"><span class="badge">${esc(e.category)}</span></td>
+     <td class="hide-sm">${e.expense_date}</td><td class="num">${peso(e.amount)}</td></tr>`).join('');
+})().catch((e) => (cats.innerHTML = `<p class="empty">${e.message}</p>`));
+</script>
+</body>
+</html>
