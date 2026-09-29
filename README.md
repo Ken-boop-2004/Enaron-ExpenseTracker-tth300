@@ -1,2 +1,3 @@
-# Enaron-ExpenseTracker-tth300
-# Enaron-ExpenseTracker-tth300
+npm init -y
+npm install 
+npm install express mysql2
